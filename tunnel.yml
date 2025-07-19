@@ -1,0 +1,7 @@
+tunnel: 8e3d82e9-ac6a-4103-aa3d-3eba0384e87f
+credentials-file: C:\Users\pd307\.cloudflared\8e3d82e9-ac6a-4103-aa3d-3eba0384e87f.json
+
+ingress:
+  - hostname: ai-agent-api.trycloudflare.com
+    service: http://localhost:3000
+  - service: http_status:404 

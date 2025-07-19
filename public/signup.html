@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - AI Agent Platform</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      height: 100vh; 
+      margin: 0;
+    }
+    .auth-container { 
+      background: #fff; 
+      padding: 40px; 
+      border-radius: 16px; 
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+      width: 400px; 
+      text-align: center;
+    }
+    h2 { 
+      margin-top: 0; 
+      color: #2c3e50; 
+      font-size: 2em;
+      margin-bottom: 30px;
+    }
+    .form-group { margin-bottom: 20px; }
+    label { 
+      display: block; 
+      margin-bottom: 8px; 
+      color: #2c3e50; 
+      font-weight: 600; 
+      text-align: left;
+    }
+    input[type="email"], input[type="password"], input[type="text"] { 
+      width: 100%; 
+      padding: 12px; 
+      border: 2px solid #e9ecef; 
+      border-radius: 8px; 
+      font-size: 1em; 
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    button { 
+      width: 100%; 
+      background: #3498db; 
+      color: #fff; 
+      border: none; 
+      padding: 14px; 
+      border-radius: 8px; 
+      font-size: 1em; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: all 0.3s ease;
+      margin-bottom: 15px;
+    }
+    button:hover { 
+      background: #2980b9; 
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .google-btn {
+      background: #fff;
+      color: #333;
+      border: 2px solid #e9ecef;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .google-btn:hover {
+      background: #f8f9fa;
+      border-color: #3498db;
+    }
+    .google-btn img {
+      width: 20px;
+      height: 20px;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #6c757d;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e9ecef;
+    }
+    .divider span {
+      padding: 0 15px;
+      font-size: 0.9em;
+    }
+    .error { 
+      color: #e74c3c; 
+      margin-bottom: 15px; 
+      text-align: center; 
+      padding: 10px;
+      background: #fdf2f2;
+      border-radius: 6px;
+      border: 1px solid #fecaca;
+    }
+    .success { 
+      color: #27ae60; 
+      margin-bottom: 15px; 
+      text-align: center; 
+      padding: 10px;
+      background: #f0fdf4;
+      border-radius: 6px;
+      border: 1px solid #bbf7d0;
+    }
+    .info { 
+      color: #3498db; 
+      margin-bottom: 15px; 
+      text-align: center; 
+      padding: 10px;
+      background: #eff6ff;
+      border-radius: 6px;
+      border: 1px solid #bfdbfe;
+    }
+    .switch-link { 
+      display: block; 
+      text-align: center; 
+      margin-top: 20px; 
+      color: #3498db; 
+      text-decoration: none; 
+      font-size: 0.95em; 
+      font-weight: 500;
+    }
+    .switch-link:hover { 
+      text-decoration: underline; 
+      color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <h2>Sign Up</h2>
+    <div id="message"></div>
+    <button class="google-btn" id="googleSignupBtn">
+      <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE3LjY0IDkuMjA0NTVDMTcuNjQgOC41NjY0IDE3LjU4MjcgNy45NTI3MyAxNy40NzY0IDcuMzYzNjRIMTlWMTBIMTcuNjRWOS4yMDQ1NVoiIGZpbGw9IiNGQjQwNDAiLz4KPHBhdGggZD0iTTkgMTguMDAwMUMxMS40MyAxOC4wMDAxIDEzLjQ2NzMgMTcuMTk0NSAxNC45NjM2IDE1Ljc4MzZMMTIuNzA5MSAxMy45NzU0NUMxMi4wMjI3IDE0LjY3MDkgMTEuMDQzNiAxNS4wOTA5IDkgMTUuMDkwOUM2LjY1OTEgMTUuMDkwOSA0LjY3MTgyIDEzLjUxMzYgMy45NjM2NCAxMS4zNjM2SDAuNjM2MzY0VjE0LjU0NTVDMS4yNzI3MyAxNi4zNzI3IDIuNzQ1NDUgMTcuODM2NCA0LjU5MDkxIDE3LjgzNjRDNi4wMjI3MyAxNy44MzY0IDcuMDQ1NDUgMTcuMjE4MiA3LjU2MzY0IDE2LjQ5MDlMOSAxOC4wMDAxWiIgZmlsbD0iIzM0QTA1RiIvPgo8cGF0aCBkPSJNMy45NjM2NCAxMS4zNjM2QzMuOTYzNjQgMTAuOTgxOCAzLjk5NTQ1IDEwLjYxODEgNC4wNTQ1NSAxMC4yNzI3SDAuNjM2MzY0VjEzLjQ1NDVDMS4yNzI3MyAxNS4zNzI3IDIuNzQ1NDUgMTYuODM2NCA0LjU5MDkxIDE2LjgzNjRDNi4wMjI3MyAxNi44MzY0IDcuMDQ1NDUgMTYuMjE4MiA3LjU2MzY0IDE2LjQ5MDlMOSAxNy4wMDAxQzExLjQzIDE3LjAwMDEgMTMuNDY3MyAxNi4xOTQ1IDE0Ljk2MzYgMTQuNzgzNkwxMi43MDkxIDEyLjk3NTRDMTIuMDIyNyAxMy42NzA5IDExLjA0MzYgMTQuMDkwOSA5IDE0LjA5MDlDNi42NTkxIDE0LjA5MDkgNC42NzE4MiAxMi41MTM2IDMuOTYzNjQgMTAuMzYzNloiIGZpbGw9IiNGQkJDMDQiLz4KPHBhdGggZD0iTTkgMy4wOTA5MUMxMC40NzI3IDMuMDkwOTEgMTEuNzQ1NSAzLjU0NTQ1IDEyLjY5MDkgNC4yNzI3M0wxNC45NjM2IDIuMDAwMDFDMTMuNDY3MyAwLjU4OTA5IDExLjQzIDAgOSAwQzUuNDY5MDkgMCAyLjQ2MzY0IDIuMDkwOTEgMS4yNzI3MyA1LjA5MDkxSDQuNTQ1NDVDNS4yNzI3MyAzLjU0NTQ1IDYuOTU5MDkgMi4wOTA5MSA5IDIuMDkwOTFDMTEuMDQzNiAyLjA5MDkxIDEyLjAyMjcgMi41MDkwOSAxMi43MDkxIDMuMjA5MDlMMTUuMDQ1NSAwLjg3MjcyN0MxNC4wNDU1IDAuMzE4MTgyIDEyLjk1NDUgMCAxMS43MjczIDBDOS4yNzI3MyAwIDcuMDQ1NDUgMS4wOTA5MSA1LjU0NTQ1IDIuNzI3MjdIMi4yNzI3M0M0LjA5MDkxIDEuMDkwOTEgNi4zNjM2NCAwIDkgMFoiIGZpbGw9IiNFQzQ0NDQiLz4KPC9zdmc+" alt="Google">
+      Continue with Google
+    </button>
+    <div class="divider">
+      <span>or</span>
+    </div>
+    <form id="signupForm">
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" required autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="new-password">
+      </div>
+      <button type="submit">Sign Up</button>
+    </form>
+    <a href="login.html" class="switch-link">Already have an account? Login</a>
+  </div>
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+    if (localStorage.getItem('accessToken')) {
+      window.location.href = 'dashboard.html';
+    }
+
+    // Google OAuth Signup
+    function signupWithGoogle() {
+      const messageDiv = document.getElementById('message');
+      console.log('Google OAuth signup initiated');
+      
+      try {
+        messageDiv.textContent = 'Redirecting to Google...';
+        messageDiv.className = 'info';
+        
+        // Log the redirect URL for debugging
+        const redirectUrl = `${API_URL}/auth/google`;
+        console.log('Redirecting to:', redirectUrl);
+        
+        // Redirect to Google OAuth endpoint
+        window.location.href = redirectUrl;
+      } catch (error) {
+        console.error('Google OAuth error:', error);
+        messageDiv.textContent = 'Failed to redirect to Google. Please try again.';
+        messageDiv.className = 'error';
+      }
+    }
+
+    document.getElementById('signupForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = '';
+      messageDiv.className = '';
+      try {
+        const res = await fetch(`${API_URL}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Signup failed');
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        messageDiv.textContent = 'Signup successful! Redirecting...';
+        messageDiv.className = 'success';
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+      } catch (err) {
+        messageDiv.textContent = err.message;
+        messageDiv.className = 'error';
+      }
+    });
+
+    // Add event listener for Google OAuth button
+    document.getElementById('googleSignupBtn').addEventListener('click', signupWithGoogle);
+  </script>
+</body>
+</html> 

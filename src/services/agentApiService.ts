@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const AGENT_API_BASE_URL = process.env.AGENT_API_BASE_URL || 'http://localhost:3000';
+console.log(AGENT_API_BASE_URL, "loggin agent api base url");
 const AGENT_API_TOKEN = process.env.AGENT_API_TOKEN || '';
 
 const authHeader = AGENT_API_TOKEN ? { Authorization: `Bearer ${AGENT_API_TOKEN}` } : undefined;

@@ -1,123 +1,136 @@
-import bcrypt from 'bcrypt';
-import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import {StringValue} from 'ms';
+import { User } from '../models/User';
+import catchAsync from '../utils/catchAsync';
+import HttpStatus from "../utils/httpStatus"
+import {AppError} from "../utils/appError";
 
-// Token expiration times - Development-friendly settings
-// In production, consider shorter times: ACCESS_TOKEN_EXPIRES='15m', REFRESH_TOKEN_EXPIRES='7d'
-const ACCESS_TOKEN_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '24h'; // Configurable via env, default 24h for development
-const REFRESH_TOKEN_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '30d'; // Configurable via env, default 30d for development
-
-function generateTokens(user: any) {
-  const accessSecret = process.env.JWT_ACCESS_SECRET;
-  const refreshSecret = process.env.JWT_REFRESH_SECRET;
-  const accessExpires = process.env.JWT_ACCESS_EXPIRES || '24h';
-  const refreshExpires = process.env.JWT_REFRESH_EXPIRES || '30d';
-  
-  if (!accessSecret || !refreshSecret) {
-    throw new Error('JWT secrets not configured');
+/**
+ * Signs a JWT token with the user ID
+ * @param {string} id - The user ID to sign
+ * @returns {string} The signed JWT token
+ */
+const signToken = (id: string): string => {
+  const secret = process.env.JWT_SECRET;
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  if (!secret) {
+    throw new Error('JWT secret not configured');
   }
-  
-  const accessToken = jwt.sign(
-    { id: user._id },
-    accessSecret,
-    { expiresIn: accessExpires as any }
+  const options: jwt.SignOptions = {
+    expiresIn: expiresIn as StringValue
+  };
+  return jwt.sign(
+    { id },
+    secret,
+     options
   );
-  const refreshToken = jwt.sign(
-    { id: user._id },
-    refreshSecret,
-    { expiresIn: refreshExpires as any }
-  );
-  return { accessToken, refreshToken };
-}
+};
 
-export async function signup(req: Request, res: Response) {
-  const { email, password, name } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
-  try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(409).json({ message: 'Email already in use' });
-    const hashed = await bcrypt.hash(password, 10);
-    const avatar = `https://robohash.org/${encodeURIComponent(email)}.png`;
-    const user = await User.create({ email, password: hashed, name, avatar });
-    const tokens = generateTokens(user);
-    user.refreshTokens.push(tokens.refreshToken);
-    await user.save();
-    res.status(201).json({ user: { id: user._id, email: user.email, name: user.name, avatar: user.avatar }, ...tokens });
-  } catch (err) {
-    res.status(500).json({ message: 'Signup failed', error: err });
-  }
-}
+/**
+ * Creates and sends a JWT token in a cookie
+ * @param {Document} user - The user document
+ * @param {number} statusCode - The HTTP status code to send
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ */
+const createSendToken = (
+  user: any,
+  statusCode: number,
+  req: Request,
+  res: Response
+): void => {
+  const token = signToken(user._id);
+  const cookieExpiresIn = Number(process.env.JWT_COOKIE_EXPIRES_IN) || 7;
 
-export async function login(req: Request, res: Response) {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
-  try {
-    const user = await User.findOne({ email });
-    if (!user || !user.password) return res.status(401).json({ message: 'Invalid credentials' });
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: 'Invalid credentials' });
-    const tokens = generateTokens(user);
-    user.refreshTokens.push(tokens.refreshToken);
-    await user.save();
-    res.json({ user: { id: user._id, email: user.email, name: user.name }, ...tokens });
-  } catch (err) {
-    res.status(500).json({ message: 'Login failed', error: err });
-  }
-}
+  // Cookie options
+  const cookieOptions = {
+    expires: new Date(Date.now() + cookieExpiresIn * 24 * 60 * 60 * 1000),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production' ? req.secure || req.headers['x-forwarded-proto'] === 'https' : false,
+    sameSite: "lax" as const,
+   
+  };
 
-export async function refreshToken(req: Request, res: Response) {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
-  try {
-    const payload: any = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || '');
-    const user = await User.findById(payload.id);
-    if (!user || !user.refreshTokens.includes(refreshToken)) return res.status(403).json({ message: 'Invalid refresh token' });
-    // Rotate refresh token
-    user.refreshTokens = user.refreshTokens.filter((t: string) => t !== refreshToken);
-    const tokens = generateTokens(user);
-    user.refreshTokens.push(tokens.refreshToken);
-    await user.save();
-    res.json({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
-  } catch (err) {
-    res.status(403).json({ message: 'Invalid or expired refresh token' });
-  }
-}
+  res.cookie('jwt', token, cookieOptions);
 
-export async function logout(req: Request, res: Response) {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
-  try {
-    const payload: any = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || '');
-    const user = await User.findById(payload.id);
-    if (!user) return res.status(403).json({ message: 'Invalid refresh token' });
-    user.refreshTokens = user.refreshTokens.filter((t: string) => t !== refreshToken);
-    await user.save();
-    res.json({ message: 'Logged out' });
-  } catch (err) {
-    res.status(403).json({ message: 'Invalid or expired refresh token' });
-  }
-}
+  // Remove sensitive data from response
+  user.password = undefined;
 
-export async function googleCallback(req: Request, res: Response) {
-  try {
-    // On success, issue tokens
-    const user = req.user as any;
-    const tokens = generateTokens(user);
-    
-    // Find and update the user to store refresh token
-    const updatedUser = await User.findById(user._id);
-    if (!updatedUser) {
-      throw new Error('User not found');
+  res.status(statusCode).json({
+    status: 'success',
+    token,
+    data: {
+      user
     }
-    
-    updatedUser.refreshTokens.push(tokens.refreshToken);
-    await updatedUser.save();
-    
-    // Redirect back to the dashboard with the access token
-    res.redirect(`/dashboard.html?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
-  } catch (error) {
-    console.error('Google callback error:', error);
-    res.redirect('/login.html?error=auth_failed');
+  });
+}
+
+export const signup = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password, name } = req.body;
+  
+  if (!email || !password){ 
+ next(new AppError("Please provide a valid email address and password", HttpStatus.BAD_REQUEST))
   }
-} 
+
+  const existing = await User.findOne({ email });
+  if (existing){ 
+   return  next(new AppError("The mail provide may be in use please provid a valid mail",HttpStatus.CONFLICT ))
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+  const avatar = `https://robohash.org/${encodeURIComponent(email)}.png`;
+  
+  const user = await User.create({
+    email,
+    password: hashed,
+    name,
+    avatar
+  });
+
+  createSendToken(user, HttpStatus.CREATED, req, res);
+});
+
+export const login = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
+
+  if (!email || !password){
+    return (new AppError("Please provide email and password", HttpStatus.BAD_REQUEST))
+  }
+
+  const user = await User.findOne({ email }).select('+password');
+
+  if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
+    return next(new AppError("Please provide a valid credentials", HttpStatus.UNAUTHORIZED))
+  }
+
+    createSendToken(user, HttpStatus.OK, req, res); 
+});
+
+
+export const logout = catchAsync(async (req: Request, res: Response) => {
+  res.cookie('jwt', 'loggedout', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true
+  });
+
+  res.status(HttpStatus.OK).json({
+    status: 'success',
+    message: 'Successfully logged out'
+  });
+});
+
+export const googleCallback = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as any;
+  
+  if (!user) {
+    return res.redirect('/login.html?error=auth_failed');
+  }
+  const token = signToken(user._id);
+  
+  // Redirect to dashboard with token in query params
+  // Frontend should handle storing the token in cookie
+  res.redirect(`/dashboard.html?token=${token}`);
+}); 
+

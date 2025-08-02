@@ -1,7 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '../.env' });
+
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express, { Application, NextFunction, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import session from 'express-session';
@@ -16,12 +18,17 @@ import authRoutes from './routes/authRoutes';
 import telegramRoutes from './routes/telegramRoutes';
 import userRoutes from './routes/userRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
+import {globalErrorHandler} from "./controllers/errorController";
+  
 
-dotenv.config();
+// Verify HTTP Status is working
+console.log(process.env.JWT_SECRET, "secret...")
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// app.set('trust proxy', true /* number of proxies between user and server */);
 
 // Security middleware
 app.use(helmet({
@@ -44,16 +51,18 @@ app.use(helmet({
 
 // CORS configuration
 const corsOptions = {
+  
   origin: process.env.ALLOWED_ORIGINS ? 
     process.env.ALLOWED_ORIGINS.split(',') : 
     ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token']
 };
 app.use(cors(corsOptions));
-
+// temporary fix for CORS preflight requests
+app.options("*", cors(corsOptions));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -181,18 +190,7 @@ app.use('*', (req: Request, res: Response) => {
 });
 
 // Global error handler
-app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Global error handler:', error);
-  const errorMessage = NODE_ENV === 'production' 
-    ? 'Internal server error' 
-    : error.message;
-  res.status(500).json({
-    error: errorMessage,
-    timestamp: new Date().toISOString(),
-    path: req.path,
-    method: req.method
-  });
-});
+app.use(globalErrorHandler);
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {

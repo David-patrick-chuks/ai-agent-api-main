@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { ExtractJwt, Strategy as JwtStrategy } from 'passport-jwt';
-import User from '../models/User';
+import {User} from '../models/User';
 dotenv.config();
 
 function attachUserId(user: any) {
@@ -26,6 +26,7 @@ passport.use(new JwtStrategy({
   }
 }));
 
+  console.log(process.env.GOOGLE_CLIENT_ID,"logging client id..")
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID || '',
   clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',

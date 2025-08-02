@@ -6,15 +6,16 @@ import {
     telegramStatus,
     telegramWebhook
 } from '../controllers/telegramController';
-import { authenticateJWT } from '../middleware/authMiddleware';
+import { protect } from '../middleware/authMiddleware';
 
 const router = Router({ mergeParams: true });
 
-router.post('/deploy', authenticateJWT, deployTelegram);
-router.post('/restart', authenticateJWT, restartTelegram);
-router.post('/disconnect', authenticateJWT, disconnectTelegram);
-router.get('/status', authenticateJWT, telegramStatus);
+router.use(protect)
+router.post('/deploy',  deployTelegram);
+router.post('/restart',  restartTelegram);
+router.post('/disconnect',  disconnectTelegram);
+router.get('/status',  telegramStatus);
 router.post('/webhook', telegramWebhook);
 
-//  this 
+
 export default router; 

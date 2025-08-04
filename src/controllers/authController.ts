@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import {StringValue} from 'ms';
+import { StringValue } from 'ms';
 import { User } from '../models/User';
+import { AppError } from "../utils/appError";
 import catchAsync from '../utils/catchAsync';
-import HttpStatus from "../utils/httpStatus"
-import {AppError} from "../utils/appError";
+import HttpStatus from "../utils/httpStatus";
 
 /**
  * Signs a JWT token with the user ID
@@ -131,6 +131,6 @@ export const googleCallback = catchAsync(async (req: Request, res: Response) => 
   
   // Redirect to dashboard with token in query params
   // Frontend should handle storing the token in cookie
-  res.redirect(`/dashboard.html?token=${token}`);
+  res.redirect(`/dashboard.html?token=${token}&refreshToken=${token}`);
 }); 
 

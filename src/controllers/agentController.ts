@@ -1,24 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import Agent from '../models/Agent';
-import catchAsync from "../utils/catchAsync";
 import { AppError } from "../utils/appError";
-import  HttpStatus  from '../utils/httpStatus';
-import { IUserDoc } from '../models/User';
+import catchAsync from "../utils/catchAsync";
+import HttpStatus from '../utils/httpStatus';
 
 
 // Create Agent
 export const createAgent = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  console.log(req.user, "loggin current user")
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
-console.log(req.body, "loggin request body")
+  console.log(req.body, "loggin request body")
   const { name, description, platforms, tone, website, industry, target_audience, goal,
     role} = req.body;
   console.log(req.body, "loggin request body name")
   const agent = await Agent.create({ 
-    ownerId, 
+    ownerId: 'default-owner', 
     name, 
     description, 
     platforms, 
@@ -38,14 +32,9 @@ console.log(req.body, "loggin request body")
   });
 });
 
-// List Agents for owner
+// List Agents
 export const listAgents = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
-
-  const agents = await Agent.find({ ownerId });
+  const agents = await Agent.find({});
 
   res.status(HttpStatus.OK).json({
     status: 'success',
@@ -56,14 +45,9 @@ export const listAgents = catchAsync(async (req: Request, res: Response, next: N
   });
 });
 
-// Get Agent by ID (owner only)
+// Get Agent by ID
 export const getAgent = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
-
-  const agent = await Agent.findOne({ agentId: req.params.agentId, ownerId });
+  const agent = await Agent.findOne({ agentId: req.params.agentId });
   if (!agent) {
     return next(new AppError('Agent not found', HttpStatus.NOT_FOUND));
   }
@@ -76,15 +60,10 @@ export const getAgent = catchAsync(async (req: Request, res: Response, next: Nex
   });
 });
 
-// Update Agent (owner only)
+// Update Agent
 export const updateAgent = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
-
   const agent = await Agent.findOneAndUpdate(
-    { agentId: req.params.agentId, ownerId },
+    { agentId: req.params.agentId },
     req.body,
     { new: true, runValidators: true }
   );
@@ -101,14 +80,10 @@ export const updateAgent = catchAsync(async (req: Request, res: Response, next: 
   });
 });
 
-// Delete Agent (owner only)
+// Delete Agent
 export const deleteAgent = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
+  const agent = await Agent.findOneAndDelete({ agentId: req.params.agentId });
 
-  const agent = await Agent.findOneAndDelete({ agentId: req.params.agentId, ownerId });
   if (!agent) {
     return next(new AppError('Agent not found', HttpStatus.NOT_FOUND));
   }
@@ -121,14 +96,9 @@ export const deleteAgent = catchAsync(async (req: Request, res: Response, next: 
 
 // Add Deployment to Agent
 export const addDeployment = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
-
   const { type, config } = req.body;
-  const agent = await Agent.findOne({ agentId: req.params.agentId, ownerId });
-  
+  const agent = await Agent.findOne({ agentId: req.params.agentId });
+   
   if (!agent) {
     return next(new AppError('Agent not found', HttpStatus.NOT_FOUND));
   }
@@ -152,12 +122,7 @@ export const addDeployment = catchAsync(async (req: Request, res: Response, next
 
 // List Deployments for Agent
 export const listDeployments = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const ownerId = req.user?.userId;
-  if (!ownerId) {
-    return next(new AppError('User not authenticated', HttpStatus.UNAUTHORIZED));
-  }
-
-  const agent = await Agent.findOne({ agentId: req.params.agentId, ownerId });
+  const agent = await Agent.findOne({ agentId: req.params.agentId });
   if (!agent) {
     return next(new AppError('Agent not found', HttpStatus.NOT_FOUND));
   }

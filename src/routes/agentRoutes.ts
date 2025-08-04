@@ -8,12 +8,10 @@ import {
     listDeployments,
     updateAgent
 } from '../controllers/agentController';
-import { protect } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 // Agent CRUD
-router.use(protect)
 router.post('/', createAgent);
 router.get('/', listAgents);
 router.get('/:agentId', getAgent);

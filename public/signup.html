@@ -217,8 +217,8 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Signup failed');
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('accessToken', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken || data.token);
         messageDiv.textContent = 'Signup successful! Redirecting...';
         messageDiv.className = 'success';
         setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);

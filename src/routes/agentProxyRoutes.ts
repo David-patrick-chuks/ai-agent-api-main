@@ -1,17 +1,17 @@
-import express, {Request, Response , NextFunction } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 
-import { askAgent, getTrainingStatus, trainAgent } from '../services/agentApiService';
+import * as fs from 'fs';
 import multer from 'multer';
-import { HttpStatus } from '../utils/httpStatus';
-import catchAsync from '../utils/catchAsync';
+import { askAgent, getTrainingStatus, trainAgent } from '../services/agentApiService';
 import { AppError } from '../utils/appError';
-import { protect } from '../middleware/authMiddleware';
+import catchAsync from '../utils/catchAsync';
+import { HttpStatus } from '../utils/httpStatus';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
 // Proxy train request
-router.post('/train', protect, upload.array('files'), catchAsync(async (req: Request, res: Response, next:NextFunction) => {
+router.post('/train', upload.array('files'), catchAsync(async (req: Request, res: Response, next:NextFunction) => {
   let payload = {
     agentId: req.body.agentId,
     source: req.body.source,
@@ -19,11 +19,16 @@ router.post('/train', protect, upload.array('files'), catchAsync(async (req: Req
     sourceUrl: req.body.sourceUrl,
     fileType: req.body.fileType,
     sourceMetadata: req.body.sourceMetadata ? JSON.parse(req.body.sourceMetadata) : undefined,
-    files: (req.files as Express.Multer.File[] || []).map(file => ({
-      path: file.path,
-      originalname: file.originalname,
-      mimetype: file.mimetype
-    }))
+    files: (req.files as Express.Multer.File[] || []).map(file => {
+      // Read the file buffer and include it in the payload
+      const buffer = fs.readFileSync(file.path);
+      return {
+        buffer: buffer,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size
+      };
+    })
   };
 
   if (!payload.agentId) {
@@ -44,7 +49,7 @@ router.post('/train', protect, upload.array('files'), catchAsync(async (req: Req
 }));
 
 // Proxy training status request
-router.get('/train/status/:jobId', protect, catchAsync(async (req: Request, res: Response, next:NextFunction) => {
+router.get('/train/status/:jobId', catchAsync(async (req: Request, res: Response, next:NextFunction) => {
   if (!req.params.jobId) {
     next(  new AppError('Job ID is required', HttpStatus.BAD_REQUEST));
   }
@@ -58,7 +63,7 @@ router.get('/train/status/:jobId', protect, catchAsync(async (req: Request, res:
 }));
 
 // Proxy ask request
-router.post('/ask', protect, catchAsync(async (req: Request, res: Response,next:NextFunction) => {
+router.post('/ask', catchAsync(async (req: Request, res: Response,next:NextFunction) => {
   if (!req.body.question) {
     next (new AppError('Question is required', HttpStatus.BAD_REQUEST));
   }

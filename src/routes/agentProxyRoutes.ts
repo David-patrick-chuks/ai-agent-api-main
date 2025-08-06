@@ -1,6 +1,5 @@
 import express, { NextFunction, Request, Response } from 'express';
 
-import * as fs from 'fs';
 import multer from 'multer';
 import { askAgent, getTrainingStatus, trainAgent } from '../services/agentApiService';
 import { AppError } from '../utils/appError';
@@ -8,7 +7,7 @@ import catchAsync from '../utils/catchAsync';
 import { HttpStatus } from '../utils/httpStatus';
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Proxy train request
 router.post('/train', upload.array('files'), catchAsync(async (req: Request, res: Response, next:NextFunction) => {
@@ -20,10 +19,9 @@ router.post('/train', upload.array('files'), catchAsync(async (req: Request, res
     fileType: req.body.fileType,
     sourceMetadata: req.body.sourceMetadata ? JSON.parse(req.body.sourceMetadata) : undefined,
     files: (req.files as Express.Multer.File[] || []).map(file => {
-      // Read the file buffer and include it in the payload
-      const buffer = fs.readFileSync(file.path);
+      // Files are already in memory, just return them as expected by external API
       return {
-        buffer: buffer,
+        buffer: file.buffer,
         originalname: file.originalname,
         mimetype: file.mimetype,
         size: file.size

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -195,7 +196,7 @@ function createTestFile(filePath: string, content: string): void {
 
 async function makeRequest<T = any>(endpoint: string, options: {
   method?: string;
-  body?: string | FormData;
+  body?: string | any;
   headers?: Record<string, string>;
 } = {}): Promise<T> {
   try {
@@ -207,7 +208,7 @@ async function makeRequest<T = any>(endpoint: string, options: {
     };
     
     // Only add Content-Type for JSON requests
-    if (!(options.body instanceof FormData)) {
+    if (options.body) {
       headers['Content-Type'] = 'application/json';
     }
     
@@ -219,7 +220,7 @@ async function makeRequest<T = any>(endpoint: string, options: {
       url,
       method: options.method || 'GET',
       headers,
-      data: options.body instanceof FormData ? options.body : (options.body ? JSON.parse(options.body as string) : undefined),
+      data: options.body ? JSON.parse(options.body) : undefined,
       timeout: 30000
     });
     
@@ -233,7 +234,7 @@ async function makeRequest<T = any>(endpoint: string, options: {
     log(`Request failed: ${errorMessage}`, 'error');
     if (error.response) {
       log(`Response status: ${error.response.status}`, 'error');
-      log(`Response data: ${JSON.stringify(error.response.data, null, 2)}`, 'error');
+      // log(`Response data: ${JSON.stringify(error.response.data, null, 2)}`, 'error');
     }
     throw new Error(errorMessage);
   }
@@ -307,24 +308,14 @@ async function trainAgentWithDocument(): Promise<TrainingResponse> {
       createTestFile(TEST_FILES.document, testTrainingData.text);
     }
     
-    // Create FormData for file upload
-    const formData = new FormData();
-    formData.append('agentId', agentId!);
-    formData.append('source', 'document');
-    formData.append('fileType', 'txt');
-    formData.append('text', testTrainingData.text);
-    
-    // Add the document file
-    const documentBuffer = fs.readFileSync(TEST_FILES.document);
-    const documentBlob = new Blob([documentBuffer], { type: 'text/plain' });
-    formData.append('files', documentBlob, 'sample.txt');
-    
+    // Use JSON instead of FormData for document training
     const data: TrainingResponse = await makeRequest<TrainingResponse>('/agent/train', {
       method: 'POST',
-      headers: {
-        // Remove Content-Type to let browser set it with boundary for FormData
-      },
-      body: formData
+      body: JSON.stringify({
+        agentId: agentId,
+        source: 'document',
+        text: testTrainingData.text
+      })
     });
     
     log('Document training started successfully', 'success');
@@ -405,20 +396,23 @@ async function trainAgentWithAudio(): Promise<TrainingResponse> {
     formData.append('source', 'audio');
     formData.append('fileType', 'mp3');
     
-    // Add the audio file as a proper file upload
+    // Add the audio file
     const audioBuffer = fs.readFileSync(TEST_FILES.audio);
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
-    formData.append('files', audioBlob, 'sample.mp3');
+    formData.append('files', audioBuffer, {
+      filename: 'sample.mp3',
+      contentType: 'audio/mp3'
+    });
     
-    // Make request with FormData
     const url = `${API_URL}/agent/train`;
     log(`Making POST request to /agent/train with audio file`);
     
     const response = await axios({
       url,
       method: 'POST',
-      headers: {},
       data: formData,
+      headers: {
+        ...formData.getHeaders()
+      },
       timeout: 30000
     });
     
@@ -430,6 +424,15 @@ async function trainAgentWithAudio(): Promise<TrainingResponse> {
                                 error.message || 
                                 'Audio training failed';
     log(`Audio training failed: ${errorMessage}`, 'error');
+    
+    // Enhanced error logging
+    if (error.response) {
+      log(`Audio training error details:`, 'error');
+      log(`  Status: ${error.response.status}`, 'error');
+      log(`  Status Text: ${error.response.statusText}`, 'error');
+      log(`  Response Data: ${JSON.stringify(error.response.data, null, 2)}`, 'error');
+    }
+    
     throw error;
   }
 }
@@ -450,20 +453,23 @@ async function trainAgentWithVideo(): Promise<TrainingResponse> {
     formData.append('source', 'video');
     formData.append('fileType', 'mp4');
     
-    // Add the video file as a proper file upload
+    // Add the video file
     const videoBuffer = fs.readFileSync(TEST_FILES.video);
-    const videoBlob = new Blob([videoBuffer], { type: 'video/mp4' });
-    formData.append('files', videoBlob, 'sample.mp4');
+    formData.append('files', videoBuffer, {
+      filename: 'sample.mp4',
+      contentType: 'video/mp4'
+    });
     
-    // Make request with FormData
     const url = `${API_URL}/agent/train`;
     log(`Making POST request to /agent/train with video file`);
     
     const response = await axios({
       url,
       method: 'POST',
-      headers: {},
       data: formData,
+      headers: {
+        ...formData.getHeaders()
+      },
       timeout: 30000
     });
     
@@ -475,6 +481,15 @@ async function trainAgentWithVideo(): Promise<TrainingResponse> {
                                 error.message || 
                                 'Video training failed';
     log(`Video training failed: ${errorMessage}`, 'error');
+    
+    // Enhanced error logging
+    if (error.response) {
+      log(`Video training error details:`, 'error');
+      log(`  Status: ${error.response.status}`, 'error');
+      log(`  Status Text: ${error.response.statusText}`, 'error');
+      log(`  Response Data: ${JSON.stringify(error.response.data, null, 2)}`, 'error');
+    }
+    
     throw error;
   }
 }
@@ -532,14 +547,14 @@ async function testAgentWithQuestion(): Promise<AskResponse> {
     });
     
     log(`Question: ${question}`, 'info');
-    log(`Full response data: ${JSON.stringify(data, null, 2)}`, 'info');
+    // log(`Full response data: ${JSON.stringify(data, null, 2)}`, 'info');
     log(`Answer: ${data.data.reply || data.data.answer || data.data.response || data.data.message || 'No answer field found'}`, 'success');
     return data;
   } catch (error: any) {
     log(`Failed to test agent: ${error.message}`, 'error');
     if (error.response) {
       log(`Response status: ${error.response.status}`, 'error');
-      log(`Response data: ${JSON.stringify(error.response.data, null, 2)}`, 'error');
+      // log(`Response data: ${JSON.stringify(error.response.data, null, 2)}`, 'error');
     }
     throw error;
   }
@@ -635,8 +650,8 @@ async function runFullTest(): Promise<void> {
 
 // Export functions for potential reuse
 export {
-    AgentResponse, AskResponse, AuthResponse, createAgent, runFullTest,
-    signupUser, TestAgent, testAgentWithQuestion, TestTrainingData, TestUser, trainAgentWithDocument, TrainingResponse
+  AgentResponse, AskResponse, AuthResponse, createAgent, runFullTest,
+  signupUser, TestAgent, testAgentWithQuestion, TestTrainingData, TestUser, trainAgentWithDocument, TrainingResponse
 };
 
 // Run the test if this file is executed directly
